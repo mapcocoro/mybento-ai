@@ -1,37 +1,38 @@
 /* ------------------------------------------------------------------
    My Bento AI — server.js ★Basic / Pro 対応（recipes フォルダ版）
    ──────────────────────────────────────────────
-   ■ Node 18+ ■ package.json に "type":"module" を追加
+   ■ Node 18+      ■ package.json に "type":"module" を追加
    ■ .env:  OPENAI_API_KEY=sk-...
 ------------------------------------------------------------------ */
 import 'dotenv/config';
-import express               from 'express';
+import express from 'express';
 import { readdirSync, readFileSync } from 'node:fs';
-import { OpenAI }            from 'openai';
+import { OpenAI } from 'openai';
 
+/* ---------- 環境設定 ---------- */
 const PORT    = process.env.PORT || 3000;
 const API_KEY = process.env.OPENAI_API_KEY;
 if (!API_KEY) {
-  console.error('❌  OPENAI_API_KEY が .env にありません'); process.exit(1);
+  console.error('❌  OPENAI_API_KEY が .env にありません');
+  process.exit(1);
 }
 
 /* ---------------------------------------------------------------
    🔹 無料版で使うレシピを「recipes/」フォルダから一括ロード
 ---------------------------------------------------------------- */
-- const recipes = JSON.parse(readFileSync('./recipes.json','utf-8'));
+const recipesDir = './recipes';                       // 相対パス
+const recipes = readdirSync(recipesDir)               // 例：base.json, extra-1.json ...
+  .filter(f => f.endsWith('.json'))
+  .flatMap(f => JSON.parse(
+    readFileSync(`${recipesDir}/${f}`, 'utf-8')
+  ));
 
-+
-+ const recipesDir = './recipes';
-+ const recipes = readdirSync(recipesDir)
-+   .filter(f => f.endsWith('.json'))
-+   .flatMap(f => JSON.parse(
-+       readFileSync(`${recipesDir}/${f}`, 'utf-8')
-+   ));
-+
-+ console.log(`🍱  Loaded ${recipes.length} local recipes`);
+console.log(`🍱  Loaded ${recipes.length} local recipes`);
 
 /* ---------- Pro 版で使う OpenAI クライアント ---------- */
 const ai  = new OpenAI({ apiKey: API_KEY });
+
+/* ---------- Express 初期化 ---------- */
 const app = express();
 app.use(express.json());
 app.use(express.static('public'));
@@ -42,17 +43,17 @@ app.use(express.static('public'));
 app.post('/api/plan-basic', (req, res) => {
   const { days = 5, servings = 1, dislikes = [] } = req.body;
 
-  // 文字列・配列どちらでも OK にする
+  // 文字列 or 配列どちらでも受け取れるように整形
   const dislikeArr = Array.isArray(dislikes)
         ? dislikes.map(s => s.trim()).filter(Boolean)
         : String(dislikes).split(',').map(s => s.trim()).filter(Boolean);
 
-  /* ---------- レシピプールを絞る ---------- */
+  /* --- レシピプールを絞る --- */
   const pool = recipes.filter(r =>
     dislikeArr.every(d => !r.ingredients.includes(d))
   );
 
-  /* ---------- days × 3 品抽出 ---------- */
+  /* --- days × 3 品抽出 --- */
   const weekdays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   const plan = Array.from({ length: days }, (_, i) => {
     const items = [];
@@ -63,7 +64,7 @@ app.post('/api/plan-basic', (req, res) => {
     return { day: weekdays[i % 7], items };
   });
 
-  return res.json(plan);
+  res.json(plan);
 });
 
 /* =======================================================
@@ -115,21 +116,24 @@ Constraints:
       ]
     });
 
-    /* ---- 出力をクリーニング ---- */
+    /* ---- 出力クリーニング ---- */
     let raw = completion.choices[0].message.content
-               .replace(/```[\s\S]*?```/g, m => m.replace(/```json|```/g,'').trim())
+               .replace(/```[\s\S]*?```/g,
+                 m => m.replace(/```json|```/g,'').trim())
                .trim();
-    const first = raw.indexOf('['), last = raw.lastIndexOf(']');
-    const plan  = JSON.parse(raw.slice(first, last + 1));
 
-    return res.json(plan);
+    const plan = JSON.parse(
+      raw.slice(raw.indexOf('['), raw.lastIndexOf(']') + 1)
+    );
+
+    res.json(plan);
 
   } catch (err) {
     if (err.code === 'insufficient_quota') {
       return res.status(429).json({ error:'quota', message:'OpenAI 上限です' });
     }
     console.error('GPT Error', err);
-    return res.status(500).json({ error:'server', detail: err.message });
+    res.status(500).json({ error:'server', detail: err.message });
   }
 });
 
@@ -138,12 +142,13 @@ Constraints:
    ======================================================= */
 app.post('/api/shopping', (req, res) => {
   try {
-    const plan = req.body;     // plan-basic / plan-pro どちらでも OK
+    const plan = req.body;               // basic / pro 共通
     const tally = {};
     plan.forEach(day =>
       day.items.forEach(dish =>
         dish.ingredients.forEach(ing => {
-          tally[ing] ??= 0; tally[ing] += 1;
+          tally[ing] ??= 0;
+          tally[ing] += 1;
         })
       )
     );
@@ -155,5 +160,6 @@ app.post('/api/shopping', (req, res) => {
 
 /* ------------------------------------------------------- */
 app.listen(PORT, () =>
-  console.log(`✅ MyBento AI API listening → http://localhost:${PORT}`)
+  console.log(`✅  MyBento AI API listening → http://localhost:${PORT}`)
 );
+
