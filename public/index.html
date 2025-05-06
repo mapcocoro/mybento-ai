@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>🍱 My Bento AI</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>🍱 My Bento AI</h1>
+
+  <form id="form">
+    <label>日数 <input type="number" name="days" value="5" min="1" max="7"></label>
+    <label>人数 <input type="number" name="servings" value="1" min="1" max="6"></label>
+    <label>除外食材 <input type="text" name="dislikes" placeholder="えび, ピーマン"></label>
+    <label>最大調理時間(分) <input type="number" name="maxTime" value="20" min="5" max="60"></label>
+    <button>プラン作成 ▶︎</button>
+  </form>
+
+  <section id="output"></section>
+  <section id="shopping"></section>
+
+  <script src="app.js"></script>
+</body>
+</html>
