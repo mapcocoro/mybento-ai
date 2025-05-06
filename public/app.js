@@ -3,7 +3,6 @@
    ────────────────────────────────────────────────────────────────
    必須環境 : Node 18+         package.json に  "type":"module" 追加
 ------------------------------------------------------------------ */
-import 'dotenv/config';
 import express           from 'express';
 import { readFileSync }  from 'node:fs';
 import { OpenAI }        from 'openai';
