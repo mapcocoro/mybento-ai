@@ -19,7 +19,7 @@ if (!API_KEY) {
    🔹 無料版で使うレシピを「recipes/」フォルダから一括ロード
 ---------------------------------------------------------------- */
 - const recipes = JSON.parse(readFileSync('./recipes.json','utf-8'));
-+ import { readdirSync } from 'node:fs';
+
 +
 + const recipesDir = './recipes';
 + const recipes = readdirSync(recipesDir)
