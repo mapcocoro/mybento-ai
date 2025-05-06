@@ -1,138 +1,70 @@
-/* ------------------------------------------------------------------
-   My Bento AI — server.js  (v2.0  Basic + Pro 両対応版)
-   ────────────────────────────────────────────────────────────────
-   必須環境 : Node 18+         package.json に  "type":"module" 追加
------------------------------------------------------------------- */
-import express           from 'express';
-import { readFileSync }  from 'node:fs';
-import { OpenAI }        from 'openai';
+/* ------------------------------------------------------------
+   My Bento AI – front-end (basic + pro)
+------------------------------------------------------------ */
+const form   = document.getElementById('form');
+const out    = document.getElementById('output');
+const shop   = document.getElementById('shopping');
+const loader = document.getElementById('loader');   // ← index.html に <div id="loader" …>
 
-const PORT    = process.env.PORT || 3000;
-const API_KEY = process.env.OPENAI_API_KEY;
-if (!API_KEY) {
-  console.error('❌  OPENAI_API_KEY が .env にありません');
-  process.exit(1);
-}
+/* ---------- util ---------- */
+const show = el => el.classList.remove('hidden');
+const hide = el => el.classList.add('hidden');
 
-/* ───────── データ / ライブラリ初期化 ───────── */
-const recipes = JSON.parse(readFileSync('./recipes.json', 'utf-8'));
-const ai      = new OpenAI({ apiKey: API_KEY });
-const app     = express();
+/* ---------- main ---------- */
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  out.innerHTML  = '';   shop.innerHTML = '';
+  show(loader);
 
-app.use(express.json());
-app.use(express.static('public'));
+  const fd   = new FormData(form);
+  const data = Object.fromEntries(fd.entries());
 
-/* ================================================================
-   1)  無料版   /api/plan-basic   （recipes.json だけで生成）
-================================================================ */
-app.post('/api/plan-basic', (req, res) => {
-  const { days = 5, servings = 1, dislikes = [], maxTime = 20 } = req.body;
+  // 文字列→配列
+  data.dislikes = (data.dislikes ?? '')
+                   .split(',').map(s=>s.trim()).filter(Boolean);
+  data.stock    = (data.stock ?? '')
+                   .split(',').map(s=>s.trim()).filter(Boolean);
 
-  // 使いやすい形にフィルタリング
-  const pool = recipes.filter(r =>
-      r.time <= maxTime &&
-      !dislikes.some(d => r.ingredients.includes(d))
-  );
-
-  if (pool.length < 3) {
-    return res.status(400).json({ error:'few_recipes', message:'条件に合うレシピが少なすぎます' });
-  }
-
-  // ランダム献立
-  const weekdays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  const plan = Array.from({length: days}).map((_, idx) => ({
-    day   : weekdays[idx % 7],
-    items : Array.from({length:3}).map(()=>pool[Math.floor(Math.random()*pool.length)])
-                     .map(item => ({ ...item, servings }))   // 分量だけ上書き
-  }));
-
-  res.json(plan);
-});
-
-/* ================================================================
-   2)  Pro 版   /api/plan-pro   （OpenAI でカロリー・在庫考慮）
-================================================================ */
-app.post('/api/plan-pro', async (req, res) => {
-  const {
-    servings = 1,
-    days     = 5,
-    dislikes = [],
-    maxTime  = 20,
-    targetCal= 600,
-    stock    = []
-  } = req.body;
-
-  const sysPrompt = `
-You are a JSON meal-planner engine.
-Return ONLY valid JSON array (no fences, no text).
-
-Schema:
-[
-  {
-    "day":"Mon",
-    "items":[
-      {"name":"...","time":15,"calories":400,"ingredients":["a","b"],"steps":["s1","s2"]}
-    ]
-  }
-]
-
-Rules:
-- 1 main + 2 sides = 3 dishes per day
-- Portion : ${servings} people
-- Each dish ≤ ${maxTime} min
-- Exclude : ${dislikes.length ? dislikes.join(', ') : 'none'}
-- Try to hit ${targetCal} kcal/day ±15 %
-- Prefer ingredients in fridge : ${stock.length ? stock.join(', ') : 'none'}
-- Generate ${days} distinct days
-`;
+  // basic / pro で API を切り替え
+  const endpoint = data.mode === 'pro' ? '/api/plan-pro' : '/api/plan-basic';
 
   try {
-    const completion = await ai.chat.completions.create({
-      model       : 'gpt-3.5-turbo-0125',
-      temperature : 0.2,
-      max_tokens  : 1200,
-      messages    : [
-        { role:'system', content: sysPrompt },
-        { role:'user',   content: JSON.stringify(recipes) }
-      ]
+    /* ---- プラン取得 ---- */
+    const res = await fetch(endpoint,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(data)
     });
+    if (!res.ok) throw new Error(await res.text());
+    const plan = await res.json();
 
-    /* ---------- 出力をクリーンアップ ---------- */
-    let raw = completion.choices[0].message.content.trim();
-    raw = raw.replace(/```[\s\S]*?```/g, m=>m.replace(/```json?|```/g,'').trim()); // ``` 消し
-    const jsonText = raw.slice(raw.indexOf('['), raw.lastIndexOf(']')+1);
-    const plan = JSON.parse(jsonText);
-    return res.json(plan);
+    /* ---- 表示 ---- */
+    out.innerHTML = plan.map(day => `
+      <div class="card">
+        <h2>${day.day}</h2>
+        ${day.items.map(d => `
+          <details>
+            <summary>${d.name} (${d.time}分${d.calories?' / '+d.calories+'kcal':''})</summary>
+            <ol>${d.steps.map(s=>`<li>${s}</li>`).join('')}</ol>
+          </details>
+        `).join('')}
+      </div>
+    `).join('');
+
+    /* ---- 買い物リスト ---- */
+    const list = await (await fetch('/api/shopping',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(plan)
+    })).json();
+
+    shop.innerHTML = `<h2>🛒 買い物リスト</h2><ul>${
+      Object.entries(list).map(([k,v])=>`<li>${k} × ${v}</li>`).join('')
+    }</ul>`;
 
   } catch(err){
-    if (err.code === 'insufficient_quota')
-      return res.status(429).json({error:'quota',message:'OpenAI API クオータ超過'});
-    console.error('GPT error', err);
-    return res.status(500).json({error:'server',message:err.message});
+    out.innerHTML = `<p style="color:red">⚠️ ${err.message}</p>`;
+  } finally{
+    hide(loader);
   }
 });
-
-/* ================================================================
-   3)  買い物リスト集計   /api/shopping   （共通）
-================================================================ */
-app.post('/api/shopping', (req, res) => {
-  try {
-    const tally = {};
-    req.body.forEach(day =>
-      day.items.forEach(d =>
-        d.ingredients.forEach(i => {
-          tally[i] ??= 0;
-          tally[i] += 1;
-        })
-      )
-    );
-    res.json(tally);
-  } catch(err){
-    res.status(400).json({error:'format',message:err.message});
-  }
-});
-
-/* ============================================================= */
-app.listen(PORT, () =>
-  console.log(`✅  My Bento AI API running → http://localhost:${PORT}`)
-);
