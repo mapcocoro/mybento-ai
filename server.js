@@ -28,28 +28,33 @@ app.use(express.static('public'));
 /* =======================================================
    ① 無料 BASIC 版  POST /api/plan-basic
    ======================================================= */
-app.post('/api/plan-basic', (req, res)=>{
-  const { days=5, servings=1, dislikes='' } = req.body;
-  const dislikeArr = dislikes.split(',').map(t=>t.trim()).filter(Boolean);
-
-  /* 1) 除外食材でレシピプールを絞る */
-  const pool = recipes.filter(r =>
+   app.post('/api/plan-basic', (req, res) => {
+    const { days = 5, servings = 1, dislikes = [] } = req.body;
+  
+    // 文字列 or 配列どちらでも受け取れるように変換
+    const dislikeArr = Array.isArray(dislikes)
+          ? dislikes.map(s => s.trim()).filter(Boolean)
+          : String(dislikes).split(',').map(s => s.trim()).filter(Boolean);
+  
+    /* ---------- レシピプールを絞る ---------- */
+    const pool = recipes.filter(r =>
       dislikeArr.every(d => !r.ingredients.includes(d))
-  );
-
-  /* 2) days × 3 品をランダム抽出 */
-  const weekdays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  const plan = Array.from({length:days}, (_,i)=>{
-    const items=[];
-    while(items.length<3 && pool.length){
-      const idx = Math.floor(Math.random()*pool.length);
-      items.push(pool.splice(idx,1)[0]);
-    }
-    return { day:weekdays[i%7], items };
+    );
+  
+    /* ---------- days × 3 品抽出 ---------- */
+    const weekdays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const plan = Array.from({ length: days }, (_, i) => {
+      const items = [];
+      while (items.length < 3 && pool.length) {
+        const idx = Math.floor(Math.random() * pool.length);
+        items.push(pool.splice(idx, 1)[0]);
+      }
+      return { day: weekdays[i % 7], items };
+    });
+  
+    return res.json(plan);
   });
-
-  return res.json(plan);
-});
+  
 
 /* =======================================================
    ② Pro 版  POST /api/plan-pro  （カロリー・在庫・除外対応）
