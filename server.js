@@ -1,7 +1,7 @@
 // server.js
 //import 'dotenv/config';
 import express from 'express';
-//import { readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 //import { OpenAI } from 'openai';
 
 //const PORT    = process.env.PORT || 3000;
