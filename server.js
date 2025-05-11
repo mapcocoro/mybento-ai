@@ -2,7 +2,7 @@
 //import 'dotenv/config';
 import express from 'express';
 import { readdirSync, readFileSync } from 'node:fs';
-import { OpenAI } from 'openai';
+//import { OpenAI } from 'openai';
 
 //const PORT    = process.env.PORT || 3000;
 //const API_KEY = process.env.OPENAI_API_KEY;
@@ -95,7 +95,7 @@ app.post('/api/plan-basic', (req, res) => {
 });
 
 // ── Pro プラン (AI) ──
-const ai = new OpenAI({ apiKey: API_KEY });
+//const ai = new OpenAI({ apiKey: API_KEY });
 
 app.post('/api/plan-pro', async (req, res) => {
   try {
