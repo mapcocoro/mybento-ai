@@ -1,62 +1,67 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>🍱 My Bento AI</title>
-  <link rel="stylesheet" href="style.css">
-  <style>
-    /* 最小限の追加 CSS */
-    .hidden { display:none }
-    #loader.spinner {
-      width:36px;height:36px;border:5px solid #ccc;border-top-color:#2196f3;
-      border-radius:50%;animation:spin 1s linear infinite;margin:1rem auto;
-    }
-    @keyframes spin {to{transform:rotate(360deg)}}
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>🥢 ゆるべんプランナー 🍱</title>
+
+  <!-- ファビコン -->
+  <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+
+  <!-- スタイルシート -->
+  <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
+  <header>
+    <h1>🥢 ゆるべんプランナー 🍱</h1>
+    <p class="tagline">毎日のお弁当づくりをゆる〜く、ラク〜に🐣</p>
+  </header>
 
-<h1>🍱 My Bento AI</h1>
+  <form id="form">
 
-<!-- プラン切替 -->
-<label><input type="radio" name="mode" value="basic" checked> 無料版</label>
-<label><input type="radio" name="mode" value="pro"> Pro版</label>
+    <label>
+      日数
+      <input type="number" name="days" value="5" min="1" max="7" />
+    </label>
+    <label>
+      除外食材
+      <input type="text" name="dislikes" placeholder="えび, ピーマン（カンマ,で区切って入力）" />
+    </label>
+    <label>
+      冷蔵庫にある食材
+      <input type="text" name="stock" placeholder="卵, キャベツ（カンマ,で区切って入力）" />
+    </label>
+    <button type="submit">プラン作成 ▶</button>
+  </form>
 
-<!-- Pro 専用フィールド（JS で表示切替しても OK）-->
-<!-- 例として targetCal / stock を追加 -->
-<form id="form">
-  <label>日数 <input type="number" name="days"    value="5" min="1" max="7"></label>
-  <label>人数 <input type="number" name="servings" value="1" min="1" max="6"></label>
-  <label>除外食材 <input type="text" name="dislikes" placeholder="えび, ピーマン"></label>
-  <label>最大調理時間(分) <input type="number" name="maxTime" value="20" min="5" max="60"></label>
+  <div id="loader" class="spinner hidden"></div>
 
-  <!-- Pro 用 -->
-  <div id="proFields" class="hidden">
-    <label>目標カロリー(kcal) <input type="number" name="targetCal" value="600"></label>
-    <label>冷蔵庫にある食材 <input type="text" name="stock" placeholder="卵, キャベツ"></label>
-  </div>
+  <section id="output"></section>
+  <section id="shopping" class="shopping"></section>
 
-  <button>プラン作成 ▶</button>
-</form>
+  <!-- ここだけに読み込む -->
+  <script type="module" src="/app.js"></script>
 
-<!-- ローディングスピナー -->
-<div id="loader" class="spinner hidden"></div>
+  <!-- お気に入り一覧 -->
+  <section id="favorites" class="card hidden">
+    <h2>⭐ お気に入り</h2>
+    <ul id="fav-list"></ul>
+  </section>
 
-<!-- 出力 -->
-<section id="output"></section>
-<section id="shopping"></section>
+  <!-- ローディング -->
+  <div id="loader" class="spinner hidden"></div>
 
-<script type="module" src="app.js"></script>
-<script>
-  /* Pro ラジオ選択でフィールド表示切替 */
-  document.querySelectorAll('input[name="mode"]').forEach(r =>
-    r.addEventListener('change', () => {
-      document.getElementById('proFields')
-        .classList.toggle('hidden', r.value !== 'pro' || !r.checked);
-    })
-  );
-</script>
+  <!-- プラン出力 -->
+  <section id="output"></section>
+
+  <!-- 買い物リスト -->
+  <section id="shopping" class="shopping"></section>
+
+  <script type="module" src="/app.js"></script>
+</body>
 </body>
 </html>
+
+
+
 
