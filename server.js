@@ -4,7 +4,7 @@ import express from 'express';
 import { readdirSync, readFileSync } from 'node:fs';
 //import { OpenAI } from 'openai';
 
-//const PORT    = process.env.PORT || 3000;
+const PORT    = process.env.PORT || 3000;
 //const API_KEY = process.env.OPENAI_API_KEY;
 //if (!API_KEY) {
   //console.error('❌ OPENAI_API_KEY is missing');
