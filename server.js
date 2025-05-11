@@ -2,7 +2,7 @@
 //import 'dotenv/config';
 import express from 'express';
 import { readdirSync, readFileSync } from 'node:fs';
-//import { OpenAI } from 'openai';
+import { OpenAI } from 'openai';
 
 //const PORT    = process.env.PORT || 3000;
 //const API_KEY = process.env.OPENAI_API_KEY;
