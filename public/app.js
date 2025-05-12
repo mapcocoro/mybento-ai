@@ -1,27 +1,46 @@
-/* public/app.js */
+// public/app.js
+const form             = document.getElementById('form');
+const outputSection    = document.getElementById('output');
+const favoritesSection = document.getElementById('favorites');
+const favList          = document.getElementById('fav-list');
+const favDetailDiv     = document.getElementById('fav-detail');
+const shoppingSection  = document.getElementById('shopping');
+const shoppingListDiv  = document.getElementById('shopping-list');
+const loader           = document.getElementById('loader');
 
-const form    = document.getElementById('form');
-const out     = document.getElementById('output');
-const shop    = document.getElementById('shopping');
-const loader  = document.getElementById('loader');
-const favArea = document.getElementById('favorites');
-const favList = document.getElementById('fav-list');
+// タブ切り替え
+const tabs     = document.querySelectorAll('nav.tabs button');
+const sections = {
+  'view-plan': document.getElementById('view-plan'),
+  'favorites': favoritesSection,
+  'shopping':  shoppingSection
+};
+tabs.forEach(btn => {
+  btn.addEventListener('click', () => {
+    // ボタンの active 切り替え
+    tabs.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    // 全セクションを隠す→対象だけ表示
+    Object.values(sections).forEach(sec => sec.classList.add('hidden'));
+    sections[btn.dataset.target].classList.remove('hidden');
+  });
+});
 
-const q    = sel => document.querySelector(sel);
-const show = el  => el.classList.remove('hidden');
-const hide = el  => el.classList.add('hidden');
+// ヘルパー
+const show = el => el.classList.remove('hidden');
+const hide = el => el.classList.add('hidden');
 
-// ── お気に入り管理 ──
+// ── お気に入り管理 ─────────────────────────
 const getFavs  = () => JSON.parse(localStorage.getItem('bentoFavs') || '[]');
 const saveFavs = favs => localStorage.setItem('bentoFavs', JSON.stringify(favs));
 
 function renderFavs() {
   const favs = getFavs();
   if (favs.length === 0) {
-    hide(favArea);
+    hide(favoritesSection);
     favList.innerHTML = '';
   } else {
-    show(favArea);
+    show(favoritesSection);
     favList.innerHTML = favs.map(name => `
       <li>
         <span class="fav-name">${name}</span>
@@ -31,32 +50,25 @@ function renderFavs() {
   }
 }
 
-/**
- * お気に入りを追加／削除
- * ・プラン内の星ボタンも一斉に色切り替え
- * ・一覧を再描画
- */
+// お気に入り追加・削除 & 星ボタン更新
 function toggleFav(name) {
   const favs = getFavs();
   const updated = favs.includes(name)
     ? favs.filter(n => n !== name)
     : [...favs, name];
   saveFavs(updated);
-
-  // プラン内のボタンも切り替え
+  // プラン内・一覧内の★ボタン切り替え
   document.querySelectorAll(`.bookmark-btn[data-name="${name}"]`)
     .forEach(btn => btn.classList.toggle('favorited'));
-
-  // 一覧を再描画
   renderFavs();
 }
 
-// 初回レンダー
+// 初回
 renderFavs();
 
-// ── 献立プラン描画ヘルパー ──
+// ── 献立プラン描画 ─────────────────────────
 function renderPlan(plan) {
-  out.innerHTML = plan.map(day => `
+  outputSection.innerHTML = plan.map(day => `
     <div class="card">
       <h2>${day.day}</h2>
       ${day.items.map(d => {
@@ -65,7 +77,7 @@ function renderPlan(plan) {
         <details>
           <summary>
             <button
-              class="bookmark-btn ${isFav ? 'favorited':''}"
+              class="bookmark-btn ${isFav ? 'favorited' : ''}"
               data-name="${d.name}"
               aria-label="お気に入り登録">
               ${isFav ? '★' : '☆'}
@@ -86,21 +98,21 @@ function renderPlan(plan) {
   `).join('');
 }
 
-// ── イベント委譲：プラン内の星ボタン ──
-out.addEventListener('click', e => {
+// プラン内の★クリックでお気に入り切替
+outputSection.addEventListener('click', e => {
   if (e.target.matches('.bookmark-btn')) {
     toggleFav(e.target.dataset.name);
   }
 });
 
-// ── お気に入り一覧での操作 ──
+// ── お気に入り一覧操作 ─────────────────────────
 favList.addEventListener('click', async e => {
-  // ① 削除ボタン（×）の場合
+  // × ボタンなら削除
   if (e.target.matches('.bookmark-btn')) {
     toggleFav(e.target.dataset.name);
     return;
   }
-  // ② 名前クリックで詳細表示
+  // 名前クリックならレシピ詳細取得
   if (e.target.matches('.fav-name')) {
     const name = e.target.textContent;
     try {
@@ -108,146 +120,127 @@ favList.addEventListener('click', async e => {
       const res = await fetch(`/api/recipe?name=${encodeURIComponent(name)}`);
       if (!res.ok) throw new Error(await res.text());
       const recipe = await res.json();
-      out.innerHTML = `
-        <details open class="card">
-          <summary><strong>${recipe.name}</strong></summary>
-          <p>カテゴリ: ${recipe.category}</p>
-          ${recipe.time   ? `<p>所要時間: ${recipe.time}分</p>`    : ''}
-          ${recipe.calories? `<p>カロリー: ${recipe.calories}kcal</p>`: ''}
-          <h3>材料</h3>
-          <ul class="ings">
-            ${recipe.ingredients.map(i=>`<li>${i}</li>`).join('')}
-          </ul>
-          <h3>手順</h3>
-          <ol class="steps">
-            ${recipe.steps.map(s=>`<li>${s}</li>`).join('')}
-          </ol>
-        </details>
+
+      favDetailDiv.innerHTML = `
+        <div class="card">
+          <details open>
+            <summary><strong>${recipe.name}</strong></summary>
+            <p>カテゴリ: ${recipe.category}</p>
+            ${recipe.time    ? `<p>所要時間: ${recipe.time}分</p>`    : ''}
+            ${recipe.calories? `<p>カロリー: ${recipe.calories}kcal</p>`: ''}
+            <h3>材料</h3>
+            <ul class="ings">
+              ${recipe.ingredients.map(i=>`<li>${i}</li>`).join('')}
+            </ul>
+            <h3>手順</h3>
+            <ol class="steps">
+              ${recipe.steps.map(s=>`<li>${s}</li>`).join('')}
+            </ol>
+          </details>
+        </div>
       `;
+      // お気に入りタブを開く
+      document.querySelector('button[data-target="favorites"]').click();
     } catch(err) {
-      out.innerHTML = `<p style="color:red">⚠️ ${err.message}</p>`;
+      favDetailDiv.innerHTML =
+        `<p style="color:red">⚠️ ${err.message}</p>`;
     } finally {
       hide(loader);
     }
   }
 });
 
-// ── フォーム送信時の処理 ──
+// ── 買い物リスト描画 ─────────────────────────
+function renderShopping(list) {
+  const seasoningKeywords = [
+    '醤油','みりん','砂糖','塩','酢','ごま油','オリーブ油',
+    '酒','みそ','黒こしょう','顆粒','カレー粉','バター',
+    'サラダ油','揚げ油','粉チーズ','豆板醤','ケチャップ',
+    'マヨネーズ','レモン汁','だし','生姜'
+  ];
+  const entries = Object.entries(list);
+  const foods = [], seasonings = [];
+  for (const [item, qty] of entries) {
+    if (seasoningKeywords.some(kw => item.includes(kw))) {
+      seasonings.push([item,qty]);
+    } else {
+      foods.push([item,qty]);
+    }
+  }
+  // チェックボックス付きリスト
+  shoppingListDiv.innerHTML = `
+    <h3>食材</h3>
+    <ul>
+      ${foods.map(([it,q])=>`
+        <li>
+          <label>
+            <input type="checkbox" class="chk" value="${it} × ${q}">
+            ${it} × ${q}
+          </label>
+        </li>`).join('')}
+    </ul>
+    <h3>調味料</h3>
+    <ul>
+      ${seasonings.map(([it,q])=>`
+        <li>
+          <label>
+            <input type="checkbox" class="chk" value="${it} × ${q}">
+            ${it} × ${q}
+          </label>
+        </li>`).join('')}
+    </ul>
+  `;
+}
+
+// コピー機能
+shoppingSection.querySelector('#copyBtn')
+  .addEventListener('click', async () => {
+    const lines = [...shoppingListDiv.querySelectorAll('.chk:checked')]
+      .map(c => c.value);
+    if (!lines.length) return alert('✔︎ を付けてください');
+    await navigator.clipboard.writeText(lines.join('\n'));
+    alert('コピーしました');
+  });
+
+// ── フォーム送信 ─────────────────────────
 form.addEventListener('submit', async e => {
   e.preventDefault();
-  // 入力値取得・整形
   const data = Object.fromEntries(new FormData(form).entries());
   data.days     = Number(data.days) || 5;
   data.dislikes = data.dislikes
-    ? data.dislikes.split(',').map(s => s.trim()).filter(Boolean)
+    ? data.dislikes.split(',').map(s=>s.trim()).filter(Boolean)
     : [];
   data.stock    = data.stock
-    ? data.stock.split(',').map(s => s.trim()).filter(Boolean)
+    ? data.stock.split(',').map(s=>s.trim()).filter(Boolean)
     : [];
 
-  // 画面クリア + ローダー
-  out.innerHTML = '';
-  shop.innerHTML = '';
   show(loader);
-
   try {
-    // 1) 献立プラン取得
-    const res = await fetch('/api/plan-basic', {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json' },
-      body: JSON.stringify(data)
+    // (1) 献立プラン取得
+    const planRes = await fetch('/api/plan-basic', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(data)
     });
-    if (!res.ok) throw new Error(await res.text());
-    const plan = await res.json();
+    if (!planRes.ok) throw new Error(await planRes.text());
+    const plan = await planRes.json();
+    renderPlan(plan);
 
-    // 2) 除外＆在庫優先フィルタ
-    let displayPlan = plan.filter(day =>
-      day.items.every(item =>
-        data.dislikes.every(d =>
-          !item.ingredients.some(ing => ing.includes(d))
-        )
-      )
-    );
-    if (data.stock.length) {
-      displayPlan = displayPlan.filter(day =>
-        day.items.some(item =>
-          item.ingredients.some(ing =>
-            data.stock.some(s => {
-              const terms = [s];
-              if (/肉$/.test(s)) terms.push(s.replace(/肉$/,''));
-              return terms.some(term => ing.includes(term));
-            })
-          )
-        )
-      );
-    }
-
-    // 3) 献立表示 or 警告
-    if (!displayPlan.length) {
-      out.innerHTML = `<p>⚠️ 条件に合うメニューが見つかりませんでした。</p>`;
-    } else {
-      renderPlan(displayPlan);
-    }
-
-    // ── ここから買い物リスト復活部分 ──
+    // (2) 買い物リスト取得
     const shopRes = await fetch('/api/shopping', {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json' },
-      body: JSON.stringify(plan)
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(plan)
     });
     if (!shopRes.ok) throw new Error(await shopRes.text());
-    const list = await shopRes.json();
+    const shopList = await shopRes.json();
+    renderShopping(shopList);
 
-    // 食材 / 調味料 に分類
-    const seasoningKeywords = [ /* … */ ];
-    const entries = Object.entries(list);
-    const seasoningItems = [], foodItems = [];
-    for (const [item, qty] of entries) {
-      if (seasoningKeywords.some(kw => item.includes(kw))) {
-        seasoningItems.push([item, qty]);
-      } else {
-        foodItems.push([item, qty]);
-      }
-    }
-
-    // 描画
-    shop.innerHTML = `
-      <h2>🛒 今週の買い物リスト
-        <button id="copyBtn">📋 コピー</button>
-      </h2>
-      <h3>食材</h3>
-      <ul>
-        ${foodItems.map(([it, q]) => `
-          <li>
-            <label>
-              <input type="checkbox" class="chk" value="${it} × ${q}">
-              ${it} × ${q}
-            </label>
-          </li>
-        `).join('')}
-      </ul>
-      <h3>調味料</h3>
-      <ul>
-        ${seasoningItems.map(([it, q]) => `
-          <li>
-            <label>
-              <input type="checkbox" class="chk" value="${it} × ${q}">
-              ${it} × ${q}
-            </label>
-          </li>
-        `).join('')}
-      </ul>
-    `;
-    document.querySelector('#copyBtn').addEventListener('click', async () => {
-      const lines = [...document.querySelectorAll('.chk:checked')].map(c=>c.value);
-      if (!lines.length) return alert('✔ を付けてください');
-      await navigator.clipboard.writeText(lines.join('\n'));
-      alert('コピーしました');
-    });
-    // ── ここまで購買リスト復活部分 ──
-
+    // 「献立プラン」タブに留まる
+    document.querySelector('button[data-target="view-plan"]').click();
   } catch(err) {
-    out.innerHTML = `<p style="color:red">⚠️ ${err.message}</p>`;
+    outputSection.innerHTML =
+      `<p style="color:red">⚠️ ${err.message}</p>`;
   } finally {
     hide(loader);
   }

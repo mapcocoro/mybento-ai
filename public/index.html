@@ -2,66 +2,58 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>🥢 ゆるべんプランナー 🍱</title>
-
-  <!-- ファビコン -->
-  <link rel="icon" href="/favicon.ico" type="image/x-icon" />
-
-  <!-- スタイルシート -->
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>🥢 Bento Planner 🍱</title>
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
   <header>
-    <h1>🥢 ゆるべんプランナー 🍱</h1>
+    <h1>🥢 Bento Planner 🍱</h1>
     <p class="tagline">毎日のお弁当づくりをゆる〜く、ラク〜に🐣</p>
   </header>
 
-  <form id="form">
+  <!-- タブナビ -->
+  <nav class="tabs">
+    <button data-target="view-plan" class="active">🥄献立プラン</button>
+    <button data-target="favorites">⭐️お気に入り</button>
+    <button data-target="shopping">🛒買い物リスト</button>
+  </nav>
 
-    <label>
-      日数
-      <input type="number" name="days" value="5" min="1" max="7" />
-    </label>
-    <label>
-      除外食材
-      <input type="text" name="dislikes" placeholder="えび, ピーマン（カンマ,で区切って入力）" />
-    </label>
-    <label>
-      冷蔵庫にある食材
-      <input type="text" name="stock" placeholder="卵, キャベツ（カンマ,で区切って入力）" />
-    </label>
-    <button type="submit">プラン作成 ▶</button>
-  </form>
-
+  <!-- 共通ローダー -->
   <div id="loader" class="spinner hidden"></div>
 
-  <section id="output"></section>
-  <section id="shopping" class="shopping"></section>
-
-  <!-- ここだけに読み込む -->
-  <script type="module" src="/app.js"></script>
-
-  <!-- お気に入り一覧 -->
-  <section id="favorites" class="card hidden">
-    <h2>⭐ お気に入り</h2>
-    <ul id="fav-list"></ul>
+  <!-- ①献立プラン画面 -->
+  <section id="view-plan">
+    <form id="form">
+      <label>日数
+        <input type="number" name="days" value="5" min="1" max="7" />
+      </label>
+      <label>除外食材
+        <input type="text" name="dislikes" placeholder="えび, ピーマン（カンマで区切り）" />
+      </label>
+      <label>冷蔵庫にある食材
+        <input type="text" name="stock" placeholder="卵, キャベツ（カンマで区切り）" />
+      </label>
+      <button type="submit">プラン作成 ▶</button>
+    </form>
+    <div id="output"></div>
   </section>
 
-  <!-- ローディング -->
-  <div id="loader" class="spinner hidden"></div>
+  <!-- ②お気に入り画面 -->
+  <section id="favorites" class="hidden">
+    <h2>⭐ お気に入り</h2>
+       <ul id="fav-list"></ul>
+   <!-- ここにレシピ詳細を出す -->
+   <div id="fav-detail"></div>
+  </section>
 
-  <!-- プラン出力 -->
-  <section id="output"></section>
+  <!-- ③買い物リスト画面 -->
+  <section id="shopping" class="hidden">
+    <h2>🛒 今週の買い物リスト <button id="copyBtn">📋 コピー</button></h2>
+    <div id="shopping-list"></div>
+  </section>
 
-  <!-- 買い物リスト -->
-  <section id="shopping" class="shopping"></section>
-
+  <!-- これだけ！ -->
   <script type="module" src="/app.js"></script>
 </body>
-</body>
 </html>
-
-
-
-
